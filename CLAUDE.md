@@ -13,8 +13,13 @@ Shared Swift package consumed by `zoo-tv` (tvOS) and `zoo-tv-ios` (iOS). Pure SP
 - `MKClient` — Hono / media-kennel networking + auth client. Base URL hard-pinned to `https://media-kennel.deckerzoo.com` (the public Traefik FQDN — resolves to LAN at home, works off-LAN elsewhere). Merged the 119-line iOS/tvOS drift by adopting the iOS version's fractional-ISO8601 date decoder + `profileId` optional parameters + `/api/external/library/...` stream paths (bug #32 fix) for both platforms. All public types have `Sendable` conformance for Swift 6 strict concurrency.
 - `MKError` — typed errors from MKClient (`badResponse`, `decodingFailed`, `noToken`, `offline`).
 
-**Out** (follow-up Changes):
-- Theme — colors + `AppBackground` are shareable; `FocusGlowButton` (tvOS) and `TouchScaleButton` (iOS) stay in their respective apps as platform-idiomatic UI.
+**In** (Phase 3, 2026-06-04, Change #115):
+- `Color(hex:)` extension — hex literal initializer (`Color(hex: 0xFF9900)`).
+- `Theme` — color tokens (`bg`, `surface`, `card`, `accent`, `danger`, `success`, `info`, `text`, `muted`, `dim`).
+- `AppBackground` — the brand-image + dark-gradient backdrop both apps use as the outermost layer of every screen. Fail-softs to flat-bg + vignette when the `zootv-background` asset isn't in the consuming app yet (e.g., iOS hasn't shipped the asset).
+
+**Out** (intentional, will stay out):
+- `FocusGlowButton` (tvOS only) and `TouchScaleButton` (iOS only). Same intent ("highlight on interaction") but the underlying SwiftUI APIs (`@FocusState` vs `@GestureState`) and design semantics (focus traversal vs touch) are platform-specific. Forcing them into a shared abstraction would either over-engineer or under-serve one platform.
 
 ## Versioning
 

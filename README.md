@@ -13,9 +13,9 @@ Shared Swift package for code consumed by both [zoo-tv](https://github.com/JdCpu
 - `MKClient` — Hono / media-kennel networking + auth client. Single base URL (`https://media-kennel.deckerzoo.com` — Traefik FQDN, resolves to LAN at home and works off-LAN). Adopts the iOS-flavored implementation: fractional-ISO8601 date decoder, optional `profileId` query parameter on all library routes, `/api/external/library/...` stream paths.
 - `MKError` — typed errors from MKClient.
 
-## Future
-
-- **Theme color tokens + `AppBackground`** — Change #115. Platform-divergent button styles stay in each app.
+**Phase 3 (v0.3.0, 2026-06-04)**:
+- `Color(hex:)` extension, `Theme` color tokens, `AppBackground` view.
+- `FocusGlowButton` (tvOS) + `TouchScaleButton` (iOS) intentionally stay in each app — platform-idiomatic UI, not shared logic.
 
 ## Usage
 
