@@ -56,22 +56,46 @@ public struct AppBackground: View {
     public init() {}
 
     public var body: some View {
-        ZStack {
-            Theme.bg
-            Image("zootv-background")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .opacity(0.55)
-            // Light vignette only — keeps the brand image visible while
-            // making sure focused cards / text still pop. Tuned looser
-            // than streaming-app standard (which targets photo fanart) since
-            // the background is a flat brand image, not a busy still.
-            LinearGradient(
-                colors: [Color.black.opacity(0.15), Color.black.opacity(0.45)],
-                startPoint: .top,
-                endPoint: .bottom,
+        // Use a flat Color as the layout anchor so the ZStack's size is
+        // ALWAYS dictated by the parent, never by the brand image's
+        // intrinsic 1920×1080 dimensions. Then GeometryReader gives the
+        // image a concrete frame matching the actual rendered screen
+        // before `.scaledToFill()` decides the fit, and `.clipped()`
+        // contains any overflow so it can't bleed into the layout system.
+        //
+        // Earlier versions of this view (v0.3.0) used a bare
+        // `Image(...).resizable().aspectRatio(.fill)` with no frame
+        // constraints. On tvOS the image happens to match the native
+        // screen size so the layout came out right by accident; on iOS
+        // the 1920×1080 image proposed iPad-landscape-ish dimensions up
+        // the chain, breaking the TabView width on iPhone portrait
+        // (Change #115 ship report).
+        Color.clear
+            .overlay(
+                GeometryReader { proxy in
+                    ZStack {
+                        Theme.bg
+                        Image("zootv-background")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                            .opacity(0.55)
+                        // Light vignette only — keeps the brand image
+                        // visible while making sure focused cards / text
+                        // still pop. Tuned looser than streaming-app
+                        // standard (which targets photo fanart) since the
+                        // background is a flat brand image, not a busy
+                        // still.
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.15), Color.black.opacity(0.45)],
+                            startPoint: .top,
+                            endPoint: .bottom,
+                        )
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                },
             )
-        }
-        .ignoresSafeArea()
+            .ignoresSafeArea()
     }
 }
