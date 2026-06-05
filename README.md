@@ -2,16 +2,20 @@
 
 Shared Swift package for code consumed by both [zoo-tv](https://github.com/JdCpuWiz/zoo-tv) (tvOS) and [zoo-tv-ios](https://github.com/JdCpuWiz/zoo-tv-ios) (iOS).
 
-## Phase 1 (this release)
+## In MKKit
 
+**Phase 1 (v0.1.0, 2026-06-04)**:
 - `Keychain` — wrapper around iOS/tvOS Keychain Services for the device JWT + profile state. Bootstrap once per app with `Keychain.configure(service:keyPrefix:)`.
 - `AppState` — `ObservableObject` driving the app lifecycle phases (`.needsPairing`, `.needsProfilePick`, `.ready`, `.signedOut`).
-- `Notification.Name.mkDeviceRevoked` — broadcast contract between MKClient (still in each app) and AppState for token-revocation auto-recovery.
+- `Notification.Name.mkDeviceRevoked` — broadcast contract for token-revocation auto-recovery.
 
-## Follow-up phases
+**Phase 2 (v0.2.0, 2026-06-04)**:
+- `MKClient` — Hono / media-kennel networking + auth client. Single base URL (`https://media-kennel.deckerzoo.com` — Traefik FQDN, resolves to LAN at home and works off-LAN). Adopts the iOS-flavored implementation: fractional-ISO8601 date decoder, optional `profileId` query parameter on all library routes, `/api/external/library/...` stream paths.
+- `MKError` — typed errors from MKClient.
 
-- **MKClient** — networking + auth client. Currently duplicated with ~119 lines of drift; needs a merge pass before lifting.
-- **Theme** — color tokens + `AppBackground`. Platform-divergent button styles (`FocusGlowButton` tvOS / `TouchScaleButton` iOS) stay in each app.
+## Future
+
+- **Theme color tokens + `AppBackground`** — Change #115. Platform-divergent button styles stay in each app.
 
 ## Usage
 

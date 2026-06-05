@@ -7,10 +7,13 @@ Shared Swift package consumed by `zoo-tv` (tvOS) and `zoo-tv-ios` (iOS). Pure SP
 **In** (Phase 1, 2026-06-04, Change #5):
 - `Keychain` — bootstrapped at app start via `Keychain.configure(service:keyPrefix:)`. Returns to a `_unconfigured` sentinel namespace if configure isn't called — silent in prod, debug-asserts in DEBUG.
 - `AppState` — `@MainActor` `ObservableObject` driving `.needsPairing` / `.needsProfilePick` / `.ready` / `.signedOut` phases. Owns the `.mkDeviceRevoked` Notification listener.
-- `Notification.Name.mkDeviceRevoked` — string-keyed broadcast contract. Each app's MKClient still defines + posts an identical name; when MKClient migrates here in Phase 2, the duplicate goes.
+- `Notification.Name.mkDeviceRevoked` — string-keyed broadcast contract.
+
+**In** (Phase 2, 2026-06-04, Change #114):
+- `MKClient` — Hono / media-kennel networking + auth client. Base URL hard-pinned to `https://media-kennel.deckerzoo.com` (the public Traefik FQDN — resolves to LAN at home, works off-LAN elsewhere). Merged the 119-line iOS/tvOS drift by adopting the iOS version's fractional-ISO8601 date decoder + `profileId` optional parameters + `/api/external/library/...` stream paths (bug #32 fix) for both platforms. All public types have `Sendable` conformance for Swift 6 strict concurrency.
+- `MKError` — typed errors from MKClient (`badResponse`, `decodingFailed`, `noToken`, `offline`).
 
 **Out** (follow-up Changes):
-- MKClient — needs a 119-line drift merge first. Lift iOS-flavored version (it's the newer, busier copy) and gate any tvOS-only branches with `#if os(tvOS)`.
 - Theme — colors + `AppBackground` are shareable; `FocusGlowButton` (tvOS) and `TouchScaleButton` (iOS) stay in their respective apps as platform-idiomatic UI.
 
 ## Versioning
