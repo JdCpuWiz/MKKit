@@ -250,6 +250,12 @@ public actor MKClient {
         /// pill near the source/resolution badges.
         public let remuxed: Bool?
         public let remuxedAt: Date?
+        /// Change #146 — TMDB-derived trailer video key (e.g. YouTube
+        /// videoId). nil when no trailer was found at metadata fetch
+        /// time. Pair with `trailerSite` to know which platform served
+        /// it; today only "YouTube" is supported end-to-end.
+        public let trailerKey: String?
+        public let trailerSite: String?
 
         /// OMDb returns ratings as `{ "Ratings": [ { "Source": "Internet Movie Database", "Value": "8.4/10" }, ... ] }`.
         /// Some MK rows store the full OMDb payload (object), some store just the array. Decode both.
@@ -304,6 +310,20 @@ public actor MKClient {
 
     public func getMovieDetail(id: String) async throws -> MovieDetail {
         try await getUnwrapped("/api/external/library/movies/\(id)")
+    }
+
+    /// Change #146 — resolve a Movie's trailerKey to a direct CDN
+    /// stream URL via MK's yt-dlp-backed extractor. URLs expire ~6h
+    /// after extraction (YouTube tokens); callers refetch on 403 and
+    /// hand the new URL to AVPlayer / TVVLCKit. expiresAt is unix
+    /// seconds for cheap client-side cache-validity checks.
+    public struct TrailerStream: Decodable, Sendable {
+        public let url: URL
+        public let expiresAt: TimeInterval
+    }
+
+    public func getMovieTrailerStream(id: String) async throws -> TrailerStream {
+        try await getUnwrapped("/api/external/library/movies/\(id)/trailer-stream")
     }
 
     // MARK: - Profiles (device JWT)
