@@ -211,7 +211,23 @@ public actor MKClient {
 
     /// Returns ALL movies in one page by default (limit=2000 — the alphabet-nav
     /// pattern per the global UI standard). Use `search` to filter server-side.
-    public func listMovies(page: Int = 1, limit: Int = 2000, search: String? = nil, profileId: String? = nil) async throws -> MoviesPage {
+    /// Change #147 — caller-selectable library sort. Matches the server's
+    /// LibrarySort union: alpha-asc (default) / alpha-desc / added-desc /
+    /// added-asc. nil = server default (alpha-asc) and omits the param.
+    public enum LibrarySort: String, Sendable {
+        case alphaAsc = "alpha-asc"
+        case alphaDesc = "alpha-desc"
+        case addedDesc = "added-desc"
+        case addedAsc = "added-asc"
+    }
+
+    public func listMovies(
+        page: Int = 1,
+        limit: Int = 2000,
+        search: String? = nil,
+        profileId: String? = nil,
+        sort: LibrarySort? = nil,
+    ) async throws -> MoviesPage {
         var path = "/api/external/library/movies?page=\(page)&limit=\(limit)"
         if let search, !search.isEmpty {
             let encoded = search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search
@@ -220,6 +236,9 @@ public actor MKClient {
         if let profileId, !profileId.isEmpty {
             let encoded = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
             path += "&profileId=\(encoded)"
+        }
+        if let sort {
+            path += "&sort=\(sort.rawValue)"
         }
         // Movies endpoint returns { success, data, meta } at the envelope level,
         // so we decode the full envelope's data+meta together via a custom shape.
@@ -474,7 +493,13 @@ public actor MKClient {
         }
     }
 
-    public func listSeries(page: Int = 1, limit: Int = 2000, search: String? = nil, profileId: String? = nil) async throws -> SeriesPage {
+    public func listSeries(
+        page: Int = 1,
+        limit: Int = 2000,
+        search: String? = nil,
+        profileId: String? = nil,
+        sort: LibrarySort? = nil,
+    ) async throws -> SeriesPage {
         var path = "/api/external/library/tv?page=\(page)&limit=\(limit)"
         if let search, !search.isEmpty {
             let encoded = search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search
@@ -483,6 +508,9 @@ public actor MKClient {
         if let profileId, !profileId.isEmpty {
             let encoded = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
             path += "&profileId=\(encoded)"
+        }
+        if let sort {
+            path += "&sort=\(sort.rawValue)"
         }
         return try await getUnwrappedWithMeta(path)
     }
