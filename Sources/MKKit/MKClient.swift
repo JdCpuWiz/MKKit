@@ -671,6 +671,64 @@ public actor MKClient {
         return URL(string: path, relativeTo: baseURL)?.absoluteURL
     }
 
+    // MARK: - Sidecar subtitles
+
+    /// A downloaded `.srt`/`.vtt` caption file sitting next to the video on
+    /// disk. Players fed an HTTP stream can't discover these the way they
+    /// discover siblings of a local file, so MK enumerates them for us and
+    /// the player feeds each one to VLCKit as a playback slave.
+    ///
+    /// `index` is positional within MK's fileName-sorted sidecar list — stable
+    /// only as long as the sidecar set on disk doesn't change, so treat it as
+    /// a request parameter, not something to persist.
+    public struct SidecarSubtitle: Decodable, Identifiable, Sendable {
+        /// Sidecar tail off the filename ("eng", "en") — nil when the file
+        /// carries no language suffix at all.
+        public let language: String?
+        /// "srt" | "vtt" | "ass" | …
+        public let format: String
+        public let fileName: String?
+        /// Mount-relative path, e.g. `/library/episodes/<id>/subtitles/0/file`.
+        /// Not usable as-is — see `subtitleFileURL(_:profileId:)`.
+        public let url: String
+        public let index: Int
+
+        public var id: Int { index }
+    }
+
+    public func subtitleTracks(
+        mediaType: String,
+        mediaId: String,
+        profileId: String? = nil,
+    ) async throws -> [SidecarSubtitle] {
+        let kind = mediaType == "movie" ? "movies" : "episodes"
+        var path = "/api/external/library/\(kind)/\(mediaId)/subtitles"
+        if let profileId, !profileId.isEmpty {
+            let encoded = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
+            path += "?profileId=\(encoded)"
+        }
+        return try await getUnwrapped(path)
+    }
+
+    /// Absolute, VLC-playable URL for one sidecar.
+    ///
+    /// MK returns `url` relative to the route mount (`/library/…`), but the
+    /// clients talk to the `/api/external/…` mount — the only one Traefik's
+    /// tinyauth bypasses off-LAN (same reasoning as the stream URLs above).
+    /// So we re-prefix rather than trusting the returned path verbatim.
+    public nonisolated func subtitleFileURL(_ sidecar: SidecarSubtitle, profileId: String? = nil) -> URL? {
+        guard let jwt = Keychain.read(.deviceJwt) else { return nil }
+        let relative = sidecar.url.hasPrefix("/") ? sidecar.url : "/\(sidecar.url)"
+        // Tolerate MK someday returning an already-prefixed path.
+        let mounted = relative.hasPrefix("/api/external") ? relative : "/api/external\(relative)"
+        var path = "\(mounted)?token=\(jwt)"
+        if let profileId, !profileId.isEmpty {
+            let encoded = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
+            path += "&profileId=\(encoded)"
+        }
+        return URL(string: path, relativeTo: baseURL)?.absoluteURL
+    }
+
     // MARK: - Wire helpers
 
     private struct Envelope<T: Decodable>: Decodable {
