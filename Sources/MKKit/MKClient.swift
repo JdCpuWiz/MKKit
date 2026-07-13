@@ -729,6 +729,74 @@ public actor MKClient {
         return URL(string: path, relativeTo: baseURL)?.absoluteURL
     }
 
+    // MARK: - Track language matching
+
+    /// Maps an MK profile's language preference ("en", "es") onto whatever a
+    /// player actually calls its tracks. Track names vary wildly between
+    /// sources ("English", "eng", "en", "English (5.1)", "Track 1: en") and
+    /// sidecar language tails are just as loose ("eng", "en", "en-US"), so we
+    /// substring-match a synonym set per language.
+    ///
+    /// Lives here rather than in each player because it touches no VLCKit
+    /// type — it's plain string matching over Foundation types, and MKKit's
+    /// drift policy says shared logic belongs in the package, not copy-pasted
+    /// into both apps.
+    public enum LanguageMatch {
+        static let synonyms: [String: [String]] = [
+            "en": ["english", "eng", "en-"],
+            "es": ["spanish", "español", "espanol", "esp", "spa", "es-"],
+            "fr": ["french", "français", "francais", "fra", "fre", "fr-"],
+            "de": ["german", "deutsch", "ger", "deu", "de-"],
+            "it": ["italian", "italiano", "ita", "it-"],
+            "ja": ["japanese", "日本語", "jpn", "ja-"],
+            "ko": ["korean", "한국어", "kor", "ko-"],
+            "pt": ["portuguese", "português", "portugues", "por", "pt-"],
+            "ru": ["russian", "русский", "rus", "ru-"],
+            "zh": ["chinese", "mandarin", "中文", "zho", "chi", "zh-"],
+            "hi": ["hindi", "हिन्दी", "hin", "hi-"],
+            "ar": ["arabic", "العربية", "ara", "ar-"],
+        ]
+
+        /// "en-US" → "en"; anything unknown falls through as itself.
+        static func canonical(_ code: String) -> String {
+            let lowered = code.lowercased()
+            return lowered.split(separator: "-").first.map(String.init) ?? lowered
+        }
+
+        /// First track whose name names `code`. `indexes` and `names` are the
+        /// paired arrays VLCKit hands back (`audioTrackIndexes`/`Names`,
+        /// `videoSubTitlesIndexes`/`Names`).
+        public static func bestTrackIndex(
+            forLanguage code: String,
+            indexes: [NSNumber],
+            names: [String],
+        ) -> Int32? {
+            let key = canonical(code)
+            let needles = synonyms[key] ?? [key]
+            let lowered = names.map { $0.lowercased() }
+            for (i, name) in lowered.enumerated() where i < indexes.count {
+                if needles.contains(where: { name.contains($0) }) {
+                    return indexes[i].int32Value
+                }
+            }
+            // Exact match against the bare 2-letter code (a track literally named "en").
+            for (i, name) in lowered.enumerated() where i < indexes.count {
+                if name == key { return indexes[i].int32Value }
+            }
+            return nil
+        }
+
+        /// True when a sidecar's language tail names the same language as
+        /// `code`. A sidecar with no language tail at all never matches — we
+        /// won't guess a language and force captions the viewer can't read.
+        public static func sidecar(_ s: SidecarSubtitle, matches code: String) -> Bool {
+            guard let lang = s.language?.lowercased(), !lang.isEmpty else { return false }
+            let key = canonical(code)
+            let needles = synonyms[key] ?? [key]
+            return lang == key || needles.contains { lang.hasPrefix($0) || $0.hasPrefix(lang) }
+        }
+    }
+
     // MARK: - Wire helpers
 
     private struct Envelope<T: Decodable>: Decodable {
