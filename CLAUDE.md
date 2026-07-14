@@ -18,6 +18,10 @@ Shared Swift package consumed by `zoo-tv` (tvOS) and `zoo-tv-ios` (iOS). Pure SP
 - `Theme` — color tokens (`bg`, `surface`, `card`, `accent`, `danger`, `success`, `info`, `text`, `muted`, `dim`).
 - `AppBackground` — the brand-image + dark-gradient backdrop both apps use as the outermost layer of every screen. Fail-softs to flat-bg + vignette when the `zootv-background` asset isn't in the consuming app yet (e.g., iOS hasn't shipped the asset).
 
+**In** (2026-07-13, Bug #124):
+- `MKClient.SidecarSubtitle` + `subtitleTracks(mediaType:mediaId:profileId:)` + `subtitleFileURL(_:profileId:)` (v0.6.0) — media-kennel enumerates the `.srt`/`.vtt` caption files sitting next to a video; the players feed them to VLCKit via `addPlaybackSlave`. MK returns each `url` **mount-relative** (`/library/…`), so `subtitleFileURL` re-prefixes `/api/external` — the only mount Traefik's tinyauth bypasses off-LAN (bug #32).
+- `MKClient.LanguageMatch` (v0.7.0) — `bestTrackIndex(forLanguage:indexes:names:)` for VLC's paired index/name arrays + `sidecar(_:matches:)` for a sidecar's language tail. Lifted out of both players, which had copy-pasted the same synonym table (exactly the drift this package exists to prevent). It touches no VLCKit type — pure string matching over Foundation types.
+
 **Out** (intentional, will stay out):
 - `FocusGlowButton` (tvOS only) and `TouchScaleButton` (iOS only). Same intent ("highlight on interaction") but the underlying SwiftUI APIs (`@FocusState` vs `@GestureState`) and design semantics (focus traversal vs touch) are platform-specific. Forcing them into a shared abstraction would either over-engineer or under-serve one platform.
 
